@@ -1,0 +1,21 @@
+const express = require('express');
+const taskRoutes = require('./routes/tasks');
+
+const app = express();
+app.use(express.json());
+
+app.use('/tasks', taskRoutes);
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Task Manager running on port ${PORT}`));
+
+module.exports = app;
