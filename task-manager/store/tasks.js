@@ -1,79 +1,95 @@
-const { v4: uuidv4 } = require('uuid');
-
-const VALID_STATUSES = ['To Do', 'In Progress', 'Completed'];
-
 let tasks = [];
+let nextId = 1;
+
+const VALID_STATUSES = ["To Do", "In Progress", "Completed"];
 
 function getAllTasks({ status, sort, search } = {}) {
-  let result = [...tasks];
+  let filteredTasks = tasks;
+
+  if (status) {
+    filteredTasks = filteredTasks.filter(task => task.status === status);
+  }
 
   if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(
-      t => t.title.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q))
+    const lowerSearch = search.toLowerCase();
+    filteredTasks = filteredTasks.filter(task =>
+      task.title.toLowerCase().includes(lowerSearch) ||
+      task.description.toLowerCase().includes(lowerSearch)
     );
   }
 
-  if (status) {
-    result = result.filter(t => t.status === status);
+  if (sort) {
+    filteredTasks.sort((a, b) => {
+      if (sort === 'title') {
+        return a.title.localeCompare(b.title);
+      } else if (sort === 'status') {
+        return a.status.localeCompare(b.status);
+      } else if (sort === 'createdAt') {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      }
+      return 0;
+    });
   }
 
-  if (sort === 'title') {
-    result.sort((a, b) => a.title.localeCompare(b.title));
-  } else if (sort === 'status') {
-    const order = { 'To Do': 0, 'In Progress': 1, 'Completed': 2 };
-    result.sort((a, b) => order[a.status] - order[b.status]);
-  } else if (sort === 'createdAt') {
-    result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }
-
-  return result;
+  return filteredTasks;
 }
 
 function getTaskById(id) {
-  return tasks.find(t => t.id === id) || null;
+  const numId = parseInt(id, 10);
+  return tasks.find(task => task.id === numId);
 }
 
-function createTask({ title, description = '', status = 'To Do' }) {
-  if (!title || title.trim() === '') throw new Error('Title is required');
-  if (!VALID_STATUSES.includes(status)) throw new Error(`Status must be one of: ${VALID_STATUSES.join(', ')}`);
+function createTask({ title, description, status = "To Do" }) {
+  if (!title || !description) {
+    throw new Error("Title and description are required");
+  }
+  if (!VALID_STATUSES.includes(status)) {
+    throw new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`);
+  }
 
   const task = {
-    id: uuidv4(),
-    title: title.trim(),
-    description: description.trim(),
+    id: nextId++,
+    title,
+    description,
     status,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
-
   tasks.push(task);
   return task;
 }
 
-function updateTask(id, { title, description, status }) {
-  const task = getTaskById(id);
-  if (!task) return null;
+function updateTask(id, updates) {
+  const numId = parseInt(id, 10);
+  const taskIndex = tasks.findIndex(task => task.id === numId);
+  if (taskIndex === -1) return null;
 
-  if (title !== undefined) {
-    if (title.trim() === '') throw new Error('Title cannot be empty');
-    task.title = title.trim();
+  const task = tasks[taskIndex];
+  if (updates.title !== undefined) task.title = updates.title;
+  if (updates.description !== undefined) task.description = updates.description;
+  if (updates.status !== undefined) {
+    if (!VALID_STATUSES.includes(updates.status)) {
+      throw new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`);
+    }
+    task.status = updates.status;
   }
-  if (description !== undefined) task.description = description.trim();
-  if (status !== undefined) {
-    if (!VALID_STATUSES.includes(status)) throw new Error(`Status must be one of: ${VALID_STATUSES.join(', ')}`);
-    task.status = status;
-  }
-
   task.updatedAt = new Date().toISOString();
   return task;
 }
 
 function deleteTask(id) {
-  const index = tasks.findIndex(t => t.id === id);
-  if (index === -1) return false;
-  tasks.splice(index, 1);
+  const numId = parseInt(id, 10);
+  const taskIndex = tasks.findIndex(task => task.id === numId);
+  if (taskIndex === -1) return false;
+  tasks.splice(taskIndex, 1);
   return true;
 }
 
-module.exports = { getAllTasks, getTaskById, createTask, updateTask, deleteTask, VALID_STATUSES };
+module.exports = {
+  VALID_STATUSES,
+  getAllTasks,
+  getTaskById,
+  createTask,
+  updateTask,
+  deleteTask
+};
